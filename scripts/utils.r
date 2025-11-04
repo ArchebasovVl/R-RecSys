@@ -63,7 +63,6 @@ predict_baseline <- function(model, user_rating_matrix, user, user_map) {
     user_id <- user_map[[user]]
 
     model[mask] <- 0
-    print(dim(model))
     predictions <- model[user_id, ]
 
     predictions
@@ -81,5 +80,3 @@ choose_k_best <- function(row, k) {
 
     index
 }
-
-print(choose_k_best(c(1.1, 4.4, 2.2, 0.7), 2))
