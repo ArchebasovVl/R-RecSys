@@ -1,13 +1,13 @@
 create_user_item_matrix <- function(
-    dataframe,
-    col_users,
-    col_items,
-    col_ratings
+  dataframe,
+  col_users,
+  col_items,
+  col_ratings
 ) {
     n <- dim(unique(dataframe[col_users])[1])
     m <- dim(unique(dataframe[col_items])[1])
 
-    user_matrix <- matrix(0, n, m)
+    user_matrix <- matrix(-10000, n, m)
 
     ids_users <- create_id(dataframe[col_users])
     ids_items <- create_id(dataframe[col_items])
@@ -39,17 +39,21 @@ fit_baseline <- function(user_rating_matrix) {
         count <- 0
         sum <- .0
         for (i in seq_len(nrow(user_rating_matrix))) {
-            if (user_rating_matrix[i, j] != 0) {
+            if (user_rating_matrix[i, j] != -10000) {
                 count <- count + 1
                 sum <- sum + user_rating_matrix[i, j]
             }
         }
-        items_means[j] <- sum / count
+        if (count != 0) {
+            items_means[j] <- sum / count
+        } else {
+            items_means[j] <- 0
+        }
     }
 
     for (i in seq_len(nrow(user_rating_matrix))) {
         for (j in seq_len(ncol(user_rating_matrix))) {
-            if (user_rating_matrix[i, j] == 0) {
+            if (user_rating_matrix[i, j] == -10000) {
                 user_rating_matrix[i, j] <- items_means[j]
             }
         }
@@ -59,10 +63,10 @@ fit_baseline <- function(user_rating_matrix) {
 }
 
 predict_baseline <- function(model, user_rating_matrix, user, user_map) {
-    mask <- user_rating_matrix == 0
+    mask <- user_rating_matrix != -10000
     user_id <- user_map[[user]]
 
-    model[mask] <- 0
+    model[mask] <- -10000
     predictions <- model[user_id, ]
 
     predictions
@@ -79,4 +83,34 @@ choose_k_best <- function(row, k) {
     }
 
     index
+}
+
+train_test_split <- function(data, p) {
+    train <- data
+    test <- matrix(0, nrow(data), ncol(data))
+    for (i in seq_len(nrow(data))) {
+        for (j in seq_len(ncol(data))) {
+            if (data[i, j] != -10000 && runif(1) < p) {
+                test[i, j] <- data[i, j]
+                train[i, j] <- -10000
+            }
+        }
+    }
+
+    list(train, test)
+}
+
+eval_mae <- function(matrix_pred, matrix_val) {
+    error <- 0
+    count <- 0
+    for (i in seq_len(nrow(matrix_pred))) {
+        for (j in seq_len(ncol(matrix_pred))) {
+            if (matrix_val[i, j] != -10000) {
+                error <- error + abs(matrix_val[i, j] - matrix_pred[i, j])
+                count <- count + 1
+            }
+        }
+    }
+
+    error / count
 }
