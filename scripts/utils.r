@@ -33,6 +33,73 @@ create_id <- function(series) {
     ids
 }
 
+cos_dist_all <- function(vector1, vector2) {
+    t(vector1) %*% vector2 / norm(vector1, type = "2") / norm(vector2, type = "2")
+}
+
+cos_dist_rated <- function(vector1, vector2) {
+    v1_2 <- 0
+    v2_2 <- 0
+    v12 <- 0
+    for (i in seq_along(vector1)) {
+        if (vector1[i] >= 0 && vector2[i] >= 0) {
+            v1_2 <- v1_2 + vector1[i] * vector1[i]
+            v2_2 <- v2_2 + vector2[i] * vector2[i]
+            v12 <- v12 + vector1[i] * vector2[i]
+        }
+    }
+    v12 / sqrt(v1_2) / sqrt(v2_2)
+}
+
+calculate_sim <- function(mat, target_ind, rated = FALSE) {
+    sim <- matrix(0, nrow = 1, ncol = nrow(mat))
+
+    if (rated) {
+        dist <- cos_dist_rated
+    } else {
+        dist <- cos_dist_all
+    }
+
+    for (i in seq_len(nrow(mat))) {
+        sim[i] <- dist(mat[target_ind, ], mat[i, ])
+    }
+
+    sim
+}
+
+calibrate_rates <- function(rates, sim) {
+    calibrated_rates <- rates
+    for (i in seq_len(nrow(rates))) {
+        calibrated_rates[i, ] <- calibrated_rates[i, ] * sim[i]
+    }
+
+    calibrated_rates
+}
+
+fit_col_filtering <- function(rates, target_ind, rated = FALSE) {
+    calculate_sim(rates, target_ind, rated)
+}
+
+predict_col_filtering <- function(rates, sim, target_ind) {
+    cal_rates <- calibrate_rates(rates, sim)
+
+    similar_users_ind <- choose_k_best(sim, 3)
+    pred_rates <- matrix(0, nrow = 1, ncol = ncol(cal_rates))
+
+    for (i in seq_len(ncol(cal_rates))) {
+        for (j in similar_users_ind) {
+            pred_rates[i] <- pred_rates[i] + cal_rates[j, i]
+        }
+    }
+    for (j in seq_len(ncol(cal_rates))) {
+        if (cal_rates[target_ind, j] >= 0) {
+            pred_rates[j] <- 0
+        }
+    }
+
+    pred_rates
+}
+
 fit_baseline <- function(user_rating_matrix) {
     items_means <- vector("numeric", ncol(user_rating_matrix))
     for (j in seq_len(ncol(user_rating_matrix))) {
