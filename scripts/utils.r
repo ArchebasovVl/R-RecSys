@@ -76,11 +76,16 @@ calibrate_rates <- function(rates, sim) {
     calibrated_rates
 }
 
-fit_col_filtering <- function(rates, target_ind, rated = FALSE) {
-    calculate_sim(rates, target_ind, rated)
+fit_col_filtering <- function(rates) {
+    rates
 }
 
-predict_col_filtering <- function(rates, sim, target_ind) {
+predict_col_filtering <- function(
+    rates,
+    target_ind,
+    rated = FALSE
+) {
+    sim <- calculate_sim(rates, target_ind, rated = FALSE)
     cal_rates <- calibrate_rates(rates, sim)
 
     similar_users_ind <- choose_k_best(sim, 3)
